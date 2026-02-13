@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 財源廣進：三倍挑戰</title>
+    <style>
+        body { margin: 0; background: #b71c1c; overflow: hidden; touch-action: none; font-family: sans-serif; }
+        #game-info { position: fixed; top: 10px; width: 100%; text-align: center; color: gold; z-index: 10; pointer-events: none; }
+        #timer { font-size: 40px; font-weight: bold; color: white; }
+        #score { font-size: 24px; display: block; }
+        
+        #player { position: absolute; bottom: 60px; left: 50%; width: 80px; height: 80px; font-size: 60px; display: flex; justify-content: center; align-items: center; transform: translateX(-50%); z-index: 20; }
+        .treasure { position: absolute; width: 50px; height: 50px; font-size: 40px; display: flex; justify-content: center; align-items: center; }
+        
+        #blessing {
+            position: fixed; top: 40%; width: 100%; text-align: center;
+            color: #FFD700; font-size: 40px; font-weight: bold;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+            display: none; z-index: 50; pointer-events: none;
+            animation: popUp 1.5s ease-out forwards;
+        }
+        @keyframes popUp {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 100; padding: 20px; text-align: center; }
+        #achievement-list { text-align: left; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; width: 80%; max-width: 300px; margin-bottom: 20px; }
+        .achieved { color: #FFD700; font-weight: bold; margin: 5px 0; }
+        .locked { color: #888; margin: 5px 0; font-size: 0.9em; }
+
+        /* 震動效果 */
+        .shake-msg { 
+            color: #ff5252; 
+            font-size: 28px; 
+            font-weight: bold; 
+            margin: 20px 0; 
+            animation: shake 0.3s infinite; 
+        }
+        @keyframes shake {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            25% { transform: translate(-3px, -2px) rotate(-2deg); }
+            50% { transform: translate(3px, 0px) rotate(2deg); }
+            75% { transform: translate(-2px, 3px) rotate(-1deg); }
+            100% { transform: translate(2px, 2px) rotate(0deg); }
+        }
+
+        #restart-btn { padding: 15px 30px; font-size: 20px; background: gold; border: none; border-radius: 10px; cursor: pointer; color: #b71c1c; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="game-info">
+        <span id="timer">30</span><br>
+        <span id="score">接到元寶: 0</span>
+    </div>
+
+    <div id="blessing">🎉</div>
+    <div id="player">👨‍🎨</div>
+    <div id="treasures-container"></div>
+
+    <div id="overlay">
+        <h1>🧧 結算時間 🧧</h1>
+        <div id="final-display"></div>
+        <div id="achievement-list"></div>
+        <button id="restart-btn" onclick="location.reload()">再挑戰一次</button>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const blessingEl = document.getElementById('blessing');
+        const overlay = document.getElementById('overlay');
+        const achievementListEl = document.getElementById('achievement-list');
+        const finalDisplay = document.getElementById('final-display');
+        const container = document.getElementById('treasures-container');
+
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = true;
+        let baseSpeed = 4;
+
+        const treasures = [
+            { id: 1, x: 0, y: -100, speed: 0, el: null },
+            { id: 2, x: 0, y: -300, speed: 0, el: null },
+            { id: 3, x: 0, y: -500, speed: 0, el: null }
+        ];
+
+        treasures.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'treasure';
+            div.innerText = '💰';
+            container.appendChild(div);
+            t.el = div;
+            resetTreasure(t);
+        });
+
+        function resetTreasure(t) {
+            t.x = Math.random() * (window.innerWidth - 50);
+            t.y = -100 - (Math.random() * 300);
+            t.speed = baseSpeed + Math.random() * 2;
+        }
+
+        const blessings = [
+            { score: 10, text: "🧧 財源滾滾來！" },
+            { score: 30, text: "✨ 萬事皆如意！" },
+            { score: 60, text: "🚀 程式沒 Bug！" },
+            { score: 100, text: "💎 薪水漲不停！" },
+            { score: 150, text: "🎊 2026 戰神！" }
+        ];
+
+        function moveHandler(e) {
+            if (!gameActive) return;
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            player.style.left = clientX + 'px';
+        }
+        window.addEventListener('mousemove', moveHandler);
+        window.addEventListener('touchmove', moveHandler, { passive: false });
+
+        const countdown = setInterval(() => {
+            if (gameActive) {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }
+        }, 1000);
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(countdown);
+            
+            // --- 嘲諷分級邏輯 ---
+            if (score === 0) {
+                finalDisplay.innerHTML = `<div class="shake-msg">你今年要躺平了嗎？🛌</div>`;
+                achievementListEl.style.display = 'none';
+            } else if (score < 10) {
+                finalDisplay.innerHTML = `<p style="font-size: 20px;">成績：${score} 分</p>
+                                          <div class="shake-msg" style="animation-duration: 0.8s;">天上掉下了餡餅<br>你居然只接到這點？🥧</div>`;
+                achievementListEl.style.display = 'none';
+            } else {
+                finalDisplay.innerHTML = `<p style="font-size: 24px;">最終成績：${score} 分</p>`;
+                let listHTML = "";
+                blessings.forEach(item => {
+                    if (score >= item.score) listHTML += `<div class="achieved">✅ ${item.text}</div>`;
+                    else listHTML += `<div class="locked">🔒 滿 ${item.score} 分解鎖</div>`;
+                });
+                achievementListEl.innerHTML = listHTML;
+                achievementListEl.style.display = 'block';
+            }
+            overlay.style.display = 'flex';
+        }
+
+        function draw() {
+            if (!gameActive) return;
+            const pRect = player.getBoundingClientRect();
+            treasures.forEach(t => {
+                t.y += t.speed;
+                if (t.y > window.innerHeight) resetTreasure(t);
+                const tRect = t.el.getBoundingClientRect();
+                if (tRect.bottom > pRect.top && tRect.right > pRect.left && tRect.left < pRect.right && tRect.top < pRect.bottom) {
+                    score++;
+                    scoreEl.innerText = "接到元寶: " + score;
+                    let found = blessings.find(b => b.score === score);
+                    if (found) {
+                        blessingEl.innerText = found.text;
+                        blessingEl.style.display = 'block';
+                        setTimeout(() => { blessingEl.style.display = 'none'; }, 1500);
+                    }
+                    resetTreasure(t);
+                    baseSpeed += 0.05;
+                }
+                t.el.style.top = t.y + 'px';
+                t.el.style.left = t.x + 'px';
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
